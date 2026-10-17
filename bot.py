@@ -5,7 +5,7 @@ from discord.ext import commands
 from flask import Flask
 from threading import Thread
 
-# 1. Render'ın timeout atmasını (kapanmasını) önleyen Flask keep-alive sunucusu
+# Flask Web Sunucusu (Render timeout koruması)
 app = Flask('')
 
 @app.route('/')
@@ -21,7 +21,7 @@ def keep_alive():
     t.daemon = True
     t.start()
 
-# 2. Discord Bot Ayarları ve Intentler
+# Discord Bot Ayarları
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
@@ -30,15 +30,15 @@ intents.voice_states = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ==========================================
-# BURAYA KENDİ SES KANALININ ID'SİNİ YAZ (Tırnak olmadan, sadece sayı)
-VOICE_CHANNEL_ID = 1560815998536515607 
+# Kendi Ses Kanalı ID'ni Buraya Yaz (Sadece Sayı)
+VOICE_CHANNEL_ID = 1560835148520357998  
 # ==========================================
 
 @bot.event
 async def on_ready():
     print(f"[+] Bot başarıyla giriş yaptı: {bot.user}", flush=True)
     
-    # Ses için Opus kütüphanesini kontrol et
+    # Opus kütüphanesi kontrolü
     if not discord.opus.is_loaded():
         try:
             discord.opus.load_opus()
@@ -46,7 +46,7 @@ async def on_ready():
         except Exception as e:
             print(f"[-] Opus yükleme uyarısı: {e}", flush=True)
 
-    # Botun sese bağlanması için önbelleğin oturmasını bekliyoruz
+    # Sese bağlanma süreci
     await asyncio.sleep(4)
     try:
         channel_id = int(VOICE_CHANNEL_ID)
@@ -65,14 +65,13 @@ async def on_ready():
     except Exception as e:
         print(f"[-] Sese bağlanma hatası: {e}", flush=True)
 
-# 3. Sistemi Başlatma
 if __name__ == "__main__":
-    # Önce 7/24 ayakta tutacak web sunucusunu başlat
     keep_alive()
     
-    # Token'ı Render Environment Variables (DISCORD_TOKEN) kısmından güvenle al
-    TOKEN = os.environ.get("DISCORD_TOKEN")
+    # Token'ı garanti çekme yöntemi
+    TOKEN = os.getenv("DISCORD_TOKEN")
+    
     if TOKEN:
         bot.run(TOKEN)
     else:
-        print("[-] HATA: DISCORD_TOKEN bulunamadı! Render Environment kısmını kontrol et.", flush=True)
+        print("[-] HATA: DISCORD_TOKEN okunamadı!", flush=True)
