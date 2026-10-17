@@ -15,7 +15,7 @@ async def on_ready():
     
     # Bağlanılacak ses kanalının ID'si
     # (Kendi ses kanalı ID'niz ile değiştirin)
-    CHANNEL_ID = 123456789012345678  
+    CHANNEL_ID = 1560815998536515607  
     
     channel = client.get_channel(CHANNEL_ID)
     if channel:
