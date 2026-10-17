@@ -1,26 +1,36 @@
 import discord
 from discord.ext import commands
+import os
 
-TOKEN = "MTU2MDgxNjE2MDE4NDcyOTYzMA.GkzI-E.mWCpPr3_j-xXZaNKaTsRSiT-CgqqGBoNdjUj9w"
-CHANNEL_ID = 1560815998536515607 
-
+# Bot izinleri (Intents) ayarları
 intents = discord.Intents.default()
-intents.guilds = True
-intents.voice_states = True
+intents.message_content = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+client = commands.Bot(command_prefix="!", intents=intents)
 
-@bot.event
+# Bot hazır olduğunda çalışacak kısım
+@client.event
 async def on_ready():
-    print(f"[+] Bot başarıyla giriş yaptı: {bot.user.name}")
-    channel = bot.get_channel(CHANNEL_ID)
-    if channel and isinstance(channel, discord.VoiceChannel):
+    print(f"[+] {client.user} olarak giriş yapıldı!")
+    
+    # Bağlanılacak ses kanalının ID'si
+    # (Kendi ses kanalı ID'niz ile değiştirin)
+    CHANNEL_ID = 123456789012345678  
+    
+    channel = client.get_channel(CHANNEL_ID)
+    if channel:
         try:
-            await channel.connect(self_deaf=True)
-            print(f"[+] Başarılı! {channel.name} ses kanalına giriş yapıldı ve nöbet başladı.")
+            await channel.connect()
+            print(f"[+] Başarılı! '{channel.name}' ses kanalına giriş yapıldı.")
         except Exception as e:
-            print(f"[!] Sese bağlanırken hata oluştu: {e}")
+            print(f"[-] Ses kanalına bağlanırken hata oluştu: {e}")
     else:
-        print("[!] HATA: Belirtilen kanal ID'si bulunamadı veya bir ses kanalı değil!")
+        print("[-] Kanal bulunamadı! Lütfen CHANNEL_ID değerini kontrol edin.")
 
-bot.run(TOKEN)
+# Tokeni Render üzerindeki "DISCORD_TOKEN" ortam değişkeninden güvenli şekilde çeker
+TOKEN = os.environ.get("DISCORD_TOKEN")
+
+if TOKEN:
+    client.run(TOKEN)
+else:
+    print("[-] HATA: 'DISCORD_TOKEN' ortam değişkeni bulunamadı! Render paneline eklediğinizden emin olun.")
