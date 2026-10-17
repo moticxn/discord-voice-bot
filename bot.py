@@ -5,7 +5,7 @@ from discord.ext import commands
 from flask import Flask
 from threading import Thread
 
-# Flask Sunucusu
+# Flask Web Sunucusu
 app = Flask('')
 
 @app.route('/')
@@ -34,33 +34,34 @@ VOICE_CHANNEL_ID = 1560815998536515607
 
 @bot.event
 async def on_ready():
-    print(f"[+] Bot giriş yaptı: {bot.user}")
+    print(f"[+] Bot giriş yaptı: {bot.user}", flush=True)
     
-    # Ses kütüphanesinin yüklü olup olmadığını kontrol et
+    # Opus kütüphanesini kontrol et
     if not discord.opus.is_loaded():
         try:
             discord.opus.load_opus()
-            print("[+] Opus kütüphanesi başarıyla yüklendi.")
+            print("[+] Opus kütüphanesi başarıyla yüklendi.", flush=True)
         except Exception as e:
-            print(f"[-] Opus yüklenirken hata: {e}")
+            print(f"[-] Opus yüklenirken hata: {e}", flush=True)
 
-    # Sese bağlanma görevi
+    # Sese bağlanma süreci
     await asyncio.sleep(3)
     try:
-        channel = bot.get_channel(VOICE_CHANNEL_ID)
+        channel_id = int(VOICE_CHANNEL_ID)
+        channel = bot.get_channel(channel_id)
         if not channel:
-            channel = await bot.fetch_channel(VOICE_CHANNEL_ID)
+            channel = await bot.fetch_channel(channel_id)
             
         if channel and isinstance(channel, discord.VoiceChannel):
             if not discord.utils.get(bot.voice_clients, guild=channel.guild):
                 await channel.connect()
-                print(f"[+] BAŞARILI: {channel.name} kanalına bağlanıldı!")
+                print(f"[+] BAŞARILI: {channel.name} ses kanalına bağlanıldı!", flush=True)
             else:
-                print("[!] Bot zaten seste.")
+                print("[!] Bot zaten bir ses kanalında.", flush=True)
         else:
-            print("[-] HATA: Kanal bulunamadı veya ses kanalı değil!")
+            print("[-] HATA: Belirtilen ID bir ses kanalı değil veya bot göremiyor!", flush=True)
     except Exception as e:
-        print(f"[-] Sese bağlanma hatası: {e}")
+        print(f"[-] Sese bağlanma hatası: {e}", flush=True)
 
 if __name__ == "__main__":
     keep_alive()
@@ -68,4 +69,4 @@ if __name__ == "__main__":
     if TOKEN:
         bot.run(TOKEN)
     else:
-        print("[-] HATA: Token bulunamadı!")
+        print("[-] HATA: DISCORD_TOKEN bulunamadı!", flush=True)
