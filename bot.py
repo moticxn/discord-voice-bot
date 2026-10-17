@@ -5,12 +5,12 @@ from discord.ext import commands
 from flask import Flask
 from threading import Thread
 
-# 1. Web Sunucusu (Render'ın kapanmasını önler)
+# 1. Web Sunucusu (Render timeout koruması)
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "Bot 7/24 Aktif ve Calisiyor!"
+    return "Bot 7/24 Aktif ve Çalışıyor!"
 
 def run():
     port = int(os.environ.get("PORT", 10000))
@@ -31,14 +31,13 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ==========================================
 # Kendi Ses Kanalı ID'nizi Buraya Yazın (Sadece Sayı)
-VOICE_CHANNEL_ID = 1560835148520357998 
+VOICE_CHANNEL_ID = 1560835148520357998  
 # ==========================================
 
 @bot.event
 async def on_ready():
-    print(f"[+] Bot basariyla giris yapti: {bot.user}", flush=True)
+    print(f"[+] Bot başarıyla giriş yaptı: {bot.user}", flush=True)
 
-    # Bot oturumunun tam baglanmasini bekleyelim
     await asyncio.sleep(3)
     
     try:
@@ -50,13 +49,28 @@ async def on_ready():
         if channel and isinstance(channel, discord.VoiceChannel):
             if not discord.utils.get(bot.voice_clients, guild=channel.guild):
                 await channel.connect(reconnect=True)
-                print(f"[+] BASARILI: {channel.name} ses kanalina baglandi ve sabit kaldi!", flush=True)
+                print(f"[+] BAŞARILI: {channel.name} ses kanalına bağlandı ve sabit kaldı!", flush=True)
             else:
-                print("[!] Bot zaten bir ses kanalinda.", flush=True)
+                print("[!] Bot zaten bir ses kanalında.", flush=True)
         else:
-            print("[-] HATA: Belirtilen ID bir ses kanali degil veya bot kanali gormuyor!", flush=True)
+            print("[-] HATA: Belirtilen ID bir ses kanalı değil veya bot göremiyor!", flush=True)
     except Exception as e:
-        print(f"[-] Sese baglanma hatasi: {e}", flush=True)
+        print(f"[-] Sese bağlanma hatası: {e}", flush=True)
+
+# GÜVENCE: Bot sesten düşerse otomatik olarak tekrar bağlanır
+@bot.event
+async def on_voice_state_update(member, before, after):
+    if member.id == bot.user.id:
+        if after.channel is None and before.channel is not None:
+            print("[!] Bot sesten koparıldı, tekrar bağlanılıyor...", flush=True)
+            await asyncio.sleep(2)
+            try:
+                channel = bot.get_channel(VOICE_CHANNEL_ID) or await bot.fetch_channel(VOICE_CHANNEL_ID)
+                if channel:
+                    await channel.connect(reconnect=True)
+                    print("[+] BAŞARILI: Bot tekrar sese bağlandı!", flush=True)
+            except Exception as e:
+                print(f"[-] Otomatik yeniden bağlanma hatası: {e}", flush=True)
 
 if __name__ == "__main__":
     keep_alive()
@@ -65,4 +79,4 @@ if __name__ == "__main__":
     if TOKEN:
         bot.run(TOKEN)
     else:
-        print("[-] HATA: Render Environment kisminda DISCORD_TOKEN bulunamadi!", flush=True)
+        print("[-] HATA: Render Environment kısmında DISCORD_TOKEN bulunamadı!", flush=True)
