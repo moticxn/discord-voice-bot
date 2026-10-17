@@ -1,0 +1,2 @@
+[build]
+packages = ["libffi-dev", "libopus-dev"]
