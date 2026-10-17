@@ -1,11 +1,11 @@
 import os
 import asyncio
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from flask import Flask
 from threading import Thread
 
-# Flask Web Sunucusu (Render timeout koruması)
+# 1. Flask Web Sunucusu (Render keep-alive)
 app = Flask('')
 
 @app.route('/')
@@ -21,7 +21,7 @@ def keep_alive():
     t.daemon = True
     t.start()
 
-# Discord Bot Ayarları
+# 2. Discord Bot Ayarları
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
@@ -31,15 +31,19 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ==========================================
 # Kendi Ses Kanalı ID'nizi Buraya Yazın (Sadece Sayı)
-VOICE_CHANNEL_ID = 1560835148520357998  
+VOICE_CHANNEL_ID = 1560835148520357998 
 # ==========================================
 
 @bot.event
 async def on_ready():
     print(f"[+] Bot başarıyla giriş yaptı: {bot.user}", flush=True)
-
     await asyncio.sleep(3)
-    
+    await connect_to_voice()
+    # Bağlantı koruma döngüsünü başlat
+    if not maintain_voice.is_running():
+        maintain_voice.start()
+
+async def connect_to_voice():
     try:
         channel_id = int(VOICE_CHANNEL_ID)
         channel = bot.get_channel(channel_id)
@@ -47,16 +51,38 @@ async def on_ready():
             channel = await bot.fetch_channel(channel_id)
             
         if channel and isinstance(channel, discord.VoiceChannel):
-            if not discord.utils.get(bot.voice_clients, guild=channel.guild):
-                # Discord.py'nin kendi yerleşik ses koruması aktif
-                await channel.connect(reconnect=True, timeout=60.0)
-                print(f"[+] BAŞARILI: {channel.name} ses kanalına bağlandı ve sabit kaldi!", flush=True)
+            voice_client = channel.guild.voice_client
+            if voice_client and voice_client.is_connected():
+                if voice_client.channel.id != channel.id:
+                    await voice_client.move_to(channel)
             else:
-                print("[!] Bot zaten bir ses kanalında.", flush=True)
-        else:
-            print("[-] HATA: Belirtilen ID bir ses kanalı değil veya bot göremiyor!", flush=True)
+                if voice_client:
+                    await voice_client.disconnect(force=True)
+                    await asyncio.sleep(2)
+                # Özel parametrelerle ses bağlantısını sabitleme
+                await channel.connect(reconnect=True, timeout=60.0, self_deaf=True)
+                print(f"[+] BAŞARILI: {channel.name} ses kanalına stabil olarak bağlandı!", flush=True)
     except Exception as e:
         print(f"[-] Sese bağlanma hatası: {e}", flush=True)
+
+# 3. Sürekli Kontrol Mekanizması (Bot sesten düşerse anında ve hatasız toplar)
+@tasks.loop(seconds=15)
+async def maintain_voice():
+    if not bot.is_closed():
+        try:
+            channel_id = int(VOICE_CHANNEL_ID)
+            channel = bot.get_channel(channel_id) or await bot.fetch_channel(channel_id)
+            if channel and channel.guild:
+                voice_client = channel.guild.voice_client
+                if not voice_client or not voice_client.is_connected():
+                    print("[!] Bağlantı koptuğu tespit edildi, stabil şekilde yeniden bağlanılıyor...", flush=True)
+                    await connect_to_voice()
+        except Exception as e:
+            print(f"[-] Döngü koruma hatası: {e}", flush=True)
+
+@maintain_voice.before_loop
+async def before_maintain_voice():
+    await bot.wait_until_ready()
 
 if __name__ == "__main__":
     keep_alive()
