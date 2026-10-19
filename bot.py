@@ -4,8 +4,10 @@ import discord
 from discord.ext import commands, tasks
 from flask import Flask
 from threading import Thread
+import urllib.request
+import time
 
-# Flask (UptimeRobot için Keep-Alive)
+# Flask (UptimeRobot ve Self-Ping için Keep-Alive)
 app = Flask('')
 
 @app.route('/')
@@ -16,10 +18,30 @@ def run():
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
 
+# Kendi kendini pingleme (Self-Ping) mekanizması
+def self_ping():
+    # Render kendi URL'ini otomatik olarak bu çevresel değişkene atar
+    url = os.environ.get("RENDER_EXTERNAL_URL")
+    if not url:
+        url = "https://discord-voice-bot-1-olga.onrender.com" # Garanti/Yedek URL
+    
+    while True:
+        try:
+            time.sleep(240) # Her 4 dakikada bir kendi adresine istek atar
+            urllib.request.urlopen(url)
+            print("[+] Self-ping atıldı, sunucu canlı tutuluyor.", flush=True)
+        except Exception as e:
+            print(f"[-] Self-ping hatası: {e}", flush=True)
+
 def keep_alive():
     t = Thread(target=run)
     t.daemon = True
     t.start()
+    
+    # Self-ping thread'ini arka planda başlatıyoruz
+    p = Thread(target=self_ping)
+    p.daemon = True
+    p.start()
 
 # Discord Bot Tanımı
 intents = discord.Intents.default()
@@ -30,7 +52,7 @@ intents.voice_states = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ==========================================
-VOICE_CHANNEL_ID = 1560835148520357998  # Kendi Ses Kanalı ID'ni buraya yaz
+VOICE_CHANNEL_ID = 1560835148520357998  # Kendi Ses Kanalı ID'n
 # ==========================================
 
 async def force_connect():
@@ -62,7 +84,6 @@ async def force_connect():
 @bot.event
 async def on_ready():
     print(f"[+] Bot giriş yaptı: {bot.user}", flush=True)
-    # Bot her açıldığında veya yeniden bağlandığında sese girmeyi tetikle
     bot.loop.create_task(force_connect())
     if not maintain_voice.is_running():
         maintain_voice.start()
